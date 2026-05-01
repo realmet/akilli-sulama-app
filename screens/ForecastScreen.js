@@ -30,12 +30,44 @@ export default function ForecastScreen() {
             if (s) {
                 const parsed = JSON.parse(s);
                 setSettings(parsed);
-                fetchForecast(parsed.lat, parsed.lon);
+                fetchForecast(parsed.lat, parsed.lon, parsed.mod);
             }
         } catch (e) { }
     }
 
-    async function fetchForecast(lat, lon) {
+    async function fetchForecast(lat, lon, mod) {
+        // Sensörlü modda ESP32 bağlantısını kontrol et
+        if (mod === 'sensorlu') {
+            try {
+                const sdRes = await fetch(`${API}/sensor-data/latest`);
+                if (sdRes.ok) {
+                    const sdData = await sdRes.json();
+                    if (!sdData.connected) {
+                        Alert.alert(
+                            '⚠️ ESP32 Bağlı Değil',
+                            'Son sensör verisi 1 saatten eski. Doğru tahmin yapılamaz. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                            [{ text: 'Tamam' }]
+                        );
+                        return;
+                    }
+                } else {
+                    Alert.alert(
+                        '⚠️ ESP32 Bağlı Değil',
+                        'Sensörden veri alınamadı. Doğru tahmin yapılamaz. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                        [{ text: 'Tamam' }]
+                    );
+                    return;
+                }
+            } catch (_) {
+                Alert.alert(
+                    '⚠️ ESP32 Bağlı Değil',
+                    'Sensöre ulaşılamadı. Doğru tahmin yapılamaz. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                    [{ text: 'Tamam' }]
+                );
+                return;
+            }
+        }
+
         setLoading(true);
         setForecast(null);
         try {
@@ -109,7 +141,7 @@ export default function ForecastScreen() {
             {/* Yenile Butonu */}
             <TouchableOpacity
                 style={s.btn}
-                onPress={() => settings && fetchForecast(settings.lat, settings.lon)}
+                onPress={() => settings && fetchForecast(settings.lat, settings.lon, settings.mod)}
                 disabled={loading}
             >
                 {loading
