@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity,
-    ActivityIndicator, StyleSheet, Alert
+    ActivityIndicator, StyleSheet, Alert, Switch
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -17,7 +17,9 @@ export default function HomeScreen() {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [settings, setSettings] = useState(null);
-    const [apiStatus, setApiStatus] = useState('checking'); // 'online' | 'offline' | 'checking'
+    const [apiStatus, setApiStatus] = useState('checking');
+    const [manualIrrigation, setManualIrrigation] = useState(false);
+    const [irrigationLoading, setIrrigationLoading] = useState(false);
 
     // --- 1. ÇEVRİMDIŞI (OFFLINE) VERİ KAYDETME FONKSİYONU ---
     const saveToOfflineQueue = async (url, body) => {
@@ -85,6 +87,33 @@ export default function HomeScreen() {
         } catch (e) {
             setApiStatus('offline');
         }
+        // Mevcut manuel sulama durumunu da çek
+        try {
+            const res = await fetch(`${API}/irrigation/control`);
+            if (res.ok) {
+                const data = await res.json();
+                setManualIrrigation(data.manual_on);
+            }
+        } catch (_) {}
+    }
+
+    async function toggleManualIrrigation(value) {
+        setIrrigationLoading(true);
+        try {
+            const res = await fetch(`${API}/irrigation/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manual_on: value }),
+            });
+            if (res.ok) {
+                setManualIrrigation(value);
+            } else {
+                Alert.alert('Hata', 'Sulama komutu gönderilemedi.');
+            }
+        } catch (_) {
+            Alert.alert('Hata', 'API\'ye bağlanılamıyor. İnternet bağlantını kontrol et.');
+        }
+        setIrrigationLoading(false);
     }
 
     async function loadSettings() {
@@ -207,6 +236,13 @@ export default function HomeScreen() {
     return (
         <ScrollView style={s.container} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
 
+            {/* Offline Mode Banner */}
+            {apiStatus === 'offline' && (
+                <View style={s.offlineBanner}>
+                    <Text style={s.offlineBannerText}>📵 Offline Mode — Yerel kurallar aktif</Text>
+                </View>
+            )}
+
             {/* API Durum Göstergesi */}
             <ApiStatusBadge />
 
@@ -238,6 +274,23 @@ export default function HomeScreen() {
                     </>
                 }
             </TouchableOpacity>
+
+            {/* Manuel Sulama Toggle */}
+            <View style={s.manualCard}>
+                <View style={{ flex: 1 }}>
+                    <Text style={s.manualTitle}>💧 {t.manualIrrigation || "Manuel Sulama"}</Text>
+                    <Text style={s.manualSub}>{manualIrrigation ? (t.irrigationOn || "Sulama açık") : (t.irrigationOff || "Sulama kapalı")}</Text>
+                </View>
+                {irrigationLoading
+                    ? <ActivityIndicator size="small" color={theme.green} />
+                    : <Switch
+                        value={manualIrrigation}
+                        onValueChange={toggleManualIrrigation}
+                        trackColor={{ false: '#ccc', true: theme.green }}
+                        thumbColor="#fff"
+                    />
+                }
+            </View>
 
             {loading && (
                 <View style={s.loadingBox}>
@@ -382,5 +435,10 @@ function makeStyles(theme) {
         emptyIcon: { fontSize: 48, marginBottom: 12 },
         emptyTitle: { fontSize: 16, fontWeight: '500', color: theme.text, marginBottom: 8 },
         emptyText: { fontSize: 13, color: theme.textSub, textAlign: 'center', lineHeight: 20 },
+        offlineBanner: { backgroundColor: '#FF5722', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 10 },
+        offlineBannerText: { color: '#fff', fontWeight: '500', fontSize: 13 },
+        manualCard: { backgroundColor: theme.card, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderWidth: 1.5, borderColor: theme.green, elevation: 2 },
+        manualTitle: { fontSize: 14, fontWeight: '500', color: theme.text, marginBottom: 2 },
+        manualSub: { fontSize: 12, color: theme.textSub },
     });
 }
