@@ -8,7 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFocusEffect } from '@react-navigation/native';
 
-const API = 'http://192.168.181.241:8001';
+const API = 'https://web-production-2b8d.up.railway.app';
 
 export default function ForecastScreen() {
     const { theme } = useTheme();
@@ -39,7 +39,10 @@ export default function ForecastScreen() {
         setLoading(true);
         setForecast(null);
         try {
-            const res = await fetch(`${API}/forecast/${lat}/${lon}`);
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10000);
+            const res = await fetch(`${API}/forecast/${lat}/${lon}`, { signal: controller.signal });
+            clearTimeout(timer);
             const data = await res.json();
             setForecast(data);
             if (data.threshold) setThreshold(data.threshold);
