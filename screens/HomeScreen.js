@@ -146,20 +146,32 @@ export default function HomeScreen() {
                         await AsyncStorage.setItem('tarla_settings', JSON.stringify(updated));
                         setSettings(updated);
                     } else {
+                        setLoading(false);
                         Alert.alert(
                             '⚠️ ESP32 Bağlı Değil',
-                            'Son sensör verisi 1 saatten eski. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                            'Son sensör verisi 1 saatten eski. Doğru tahmin yapılamaz. Wr değerini manuel girin veya Sensörsüz moda geçin.',
                             [{ text: 'Tamam' }]
                         );
+                        return;
                     }
                 } else {
+                    setLoading(false);
                     Alert.alert(
                         '⚠️ ESP32 Bağlı Değil',
-                        'Sensörden veri alınamadı. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                        'Sensörden veri alınamadı. Doğru tahmin yapılamaz. Wr değerini manuel girin veya Sensörsüz moda geçin.',
                         [{ text: 'Tamam' }]
                     );
+                    return;
                 }
-            } catch (_) { }
+            } catch (_) {
+                setLoading(false);
+                Alert.alert(
+                    '⚠️ ESP32 Bağlı Değil',
+                    'Sensöre ulaşılamadı. Doğru tahmin yapılamaz. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                    [{ text: 'Tamam' }]
+                );
+                return;
+            }
         }
 
         const url = currentSettings.mod === 'sensorsuz'
