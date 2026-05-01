@@ -270,7 +270,7 @@ export default function SettingsScreen() {
                 <Text style={s.modDesc}>{mod === 'sensorsuz' ? t.sensorlessDesc : t.sensorDesc}</Text>
             </View>
 
-            {/* Sensörlü Mod */}
+            {/* Sensörlü Mod — sadece opsiyonel yağış */}
             {mod === 'sensorlu' && (
                 <>
                     <Text style={s.sectionLabel}>{t.sensorData}</Text>
@@ -283,6 +283,32 @@ export default function SettingsScreen() {
                                   </Text>
                             }
                         </TouchableOpacity>
+                        <View style={s.divider} />
+                        <Text style={s.inputLabel}>{t.rainInput}</Text>
+                        <TextInput
+                            style={s.input}
+                            value={rain}
+                            onChangeText={setRain}
+                            keyboardType="numeric"
+                            placeholder={t.rainPlaceholder}
+                            placeholderTextColor={theme.textLight}
+                        />
+                    </View>
+                </>
+            )}
+
+            {/* Sensörsüz Mod — opsiyonel Wr ve yağış */}
+            {mod === 'sensorsuz' && (
+                <>
+                    <Text style={s.sectionLabel}>
+                        {lang === 'tr' ? '⚙️ Opsiyonel Girdiler' : '⚙️ Optional Inputs'}
+                    </Text>
+                    <View style={s.card}>
+                        <Text style={s.optionalNote}>
+                            {lang === 'tr'
+                                ? 'Boş bırakılabilir. Girilirse tahmin daha hassas olur.'
+                                : 'Optional. Filling these improves prediction accuracy.'}
+                        </Text>
                         <View style={s.divider} />
                         <Text style={s.inputLabel}>{t.wrInput}</Text>
                         <TextInput
@@ -343,6 +369,7 @@ function makeStyles(theme) {
         btnText: { color: '#fff', fontWeight: '500', fontSize: 16 },
         infoBox: { backgroundColor: theme.greenLight, borderRadius: 12, padding: 14 },
         infoText: { fontSize: 12, color: theme.greenText, lineHeight: 18 },
+        optionalNote: { fontSize: 12, color: theme.textSub, fontStyle: 'italic', marginBottom: 4 },
         sensorFetchBtn: { backgroundColor: '#2196F3', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 4 },
         sensorFetchText: { color: '#fff', fontWeight: '500', fontSize: 13 },
         mapBtn: { backgroundColor: theme.card, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, borderWidth: 1.5, borderColor: '#4caf50' },
