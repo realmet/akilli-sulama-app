@@ -147,6 +147,7 @@ export default function HomeScreen() {
                     setSettings(updated);
                 }
             } catch (_) { /* sensör verisi yoksa manuel değeri kullan */ }
+            } catch (_) { }
         }
 
         const url = currentSettings.mod === 'sensorsuz'

@@ -70,11 +70,15 @@ export default function SettingsScreen() {
             const res = await fetch(`${API}/sensor-data/latest`);
             if (!res.ok) throw new Error('veri yok');
             const data = await res.json();
-            setWr(String(data.wr.toFixed(1)));
-            const ts = new Date(data.timestamp).toLocaleTimeString('tr-TR');
-            Alert.alert('Sensör Verisi Alındı', `Wr: ${data.wr.toFixed(1)} mm\nSıcaklık: ${data.temperature ?? '-'}°C\nNem: ${data.humidity ?? '-'}%\nSon okuma: ${ts}`);
+            if (!data.connected) {
+                Alert.alert('⚠️ ESP32 Bağlı Değil', `Son okuma 1 saatten eski (${new Date(data.timestamp).toLocaleTimeString('tr-TR')}). Wr değerini manuel girin.`);
+            } else {
+                setWr(String(data.wr.toFixed(1)));
+                const ts = new Date(data.timestamp).toLocaleTimeString('tr-TR');
+                Alert.alert('✅ Sensör Verisi Alındı', `Wr: ${data.wr.toFixed(1)} mm\nSıcaklık: ${data.temperature ?? '-'}°C\nNem: ${data.humidity ?? '-'}%\nSon okuma: ${ts}`);
+            }
         } catch (_) {
-            Alert.alert('Hata', 'Sensörden veri alınamadı. ESP32 bağlı ve çalışıyor mu?');
+            Alert.alert('⚠️ ESP32 Bağlı Değil', 'Sensörden veri alınamadı. ESP32 çalışıyor mu?');
         }
         setSensorFetching(false);
     }
