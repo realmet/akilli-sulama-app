@@ -9,7 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFocusEffect } from '@react-navigation/native';
 
-const API = 'http://192.168.181.241:8001';
+const API = 'https://web-production-2b8d.up.railway.app';
 
 export default function HomeScreen() {
     const { theme } = useTheme();
@@ -96,10 +96,28 @@ export default function HomeScreen() {
 
     // --- 4. ANA ANALİZ (YAPAY ZEKA VE OFFLINE KARAR) FONKSİYONU ---
     async function analizeEt() {
-        // Test için ayarlar yoksa geçici sahte veri oluşturuyoruz (Çökmeyi engeller)
         let currentSettings = settings;
         if (!currentSettings) {
-            currentSettings = { mod: 'sensorlu', lat: 24.3, lon: 69.15, wr: 5, rain: 0 };
+            currentSettings = { mod: 'sensorlu', lat: 39.9167, lon: 32.8333, wr: 95, rain: 0 };
+        }
+
+        setLoading(true);
+        setResult(null);
+
+        // Sensörlü modda ESP32'nin son okumasını API'den çek
+        let wrValue = currentSettings.wr;
+        if (currentSettings.mod === 'sensorlu') {
+            try {
+                const sdRes = await fetch(`${API}/sensor-data/latest`);
+                if (sdRes.ok) {
+                    const sdData = await sdRes.json();
+                    wrValue = sdData.wr;
+                    // Güncel değeri ayarlara da yaz
+                    const updated = { ...currentSettings, wr: wrValue };
+                    await AsyncStorage.setItem('tarla_settings', JSON.stringify(updated));
+                    setSettings(updated);
+                }
+            } catch (_) { /* sensör verisi yoksa manuel değeri kullan */ }
         }
 
         const url = currentSettings.mod === 'sensorsuz'
@@ -108,10 +126,7 @@ export default function HomeScreen() {
 
         const body = currentSettings.mod === 'sensorsuz'
             ? { location: { lat: currentSettings.lat, lon: currentSettings.lon } }
-            : { wr_current: currentSettings.wr, location: { lat: currentSettings.lat, lon: currentSettings.lon }, rain_next_3days: currentSettings.rain };
-
-        setLoading(true);
-        setResult(null);
+            : { wr_current: wrValue, location: { lat: currentSettings.lat, lon: currentSettings.lon }, rain_next_3days: currentSettings.rain };
 
         try {
             const netInfo = await NetInfo.fetch();

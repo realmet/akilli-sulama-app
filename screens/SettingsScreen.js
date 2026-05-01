@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity,
-    TextInput, StyleSheet, Alert, Modal
+    TextInput, StyleSheet, Alert, Modal, ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import MapView, { Marker } from 'react-native-maps';
+
+const API = 'https://web-production-2b8d.up.railway.app';
 
 
 export default function SettingsScreen() {
@@ -20,6 +22,7 @@ export default function SettingsScreen() {
     const [saved, setSaved] = useState(false);
     const [locationName, setLocationName] = useState('');
     const [locationLoading, setLocationLoading] = useState(false);
+    const [sensorFetching, setSensorFetching] = useState(false);
     const [showMap, setShowMap] = useState(false);
     const [tempCoords, setTempCoords] = useState(null);
 
@@ -59,6 +62,21 @@ export default function SettingsScreen() {
         } catch (e) {
             Alert.alert(t.errorTitle, lang === 'tr' ? 'Konum alınamadı!' : 'Could not get location!');
         }
+    }
+
+    async function fetchFromSensor() {
+        setSensorFetching(true);
+        try {
+            const res = await fetch(`${API}/sensor-data/latest`);
+            if (!res.ok) throw new Error('veri yok');
+            const data = await res.json();
+            setWr(String(data.wr.toFixed(1)));
+            const ts = new Date(data.timestamp).toLocaleTimeString('tr-TR');
+            Alert.alert('Sensör Verisi Alındı', `Wr: ${data.wr.toFixed(1)} mm\nSıcaklık: ${data.temperature ?? '-'}°C\nNem: ${data.humidity ?? '-'}%\nSon okuma: ${ts}`);
+        } catch (_) {
+            Alert.alert('Hata', 'Sensörden veri alınamadı. ESP32 bağlı ve çalışıyor mu?');
+        }
+        setSensorFetching(false);
     }
 
     async function loadSettings() {
@@ -284,6 +302,15 @@ export default function SettingsScreen() {
                 <>
                     <Text style={s.sectionLabel}>{t.sensorData}</Text>
                     <View style={s.card}>
+                        <TouchableOpacity style={s.sensorFetchBtn} onPress={fetchFromSensor} disabled={sensorFetching}>
+                            {sensorFetching
+                                ? <ActivityIndicator size="small" color="#fff" />
+                                : <Text style={s.sensorFetchText}>
+                                    {lang === 'tr' ? '📡 ESP32\'den Güncel Veriyi Çek' : '📡 Fetch Latest from ESP32'}
+                                  </Text>
+                            }
+                        </TouchableOpacity>
+                        <View style={s.divider} />
                         <Text style={s.inputLabel}>{t.wrInput}</Text>
                         <TextInput
                             style={s.input}
@@ -346,6 +373,8 @@ function makeStyles(theme) {
         btnText: { color: '#fff', fontWeight: '500', fontSize: 16 },
         infoBox: { backgroundColor: theme.greenLight, borderRadius: 12, padding: 14 },
         infoText: { fontSize: 12, color: theme.greenText, lineHeight: 18 },
+        sensorFetchBtn: { backgroundColor: '#2196F3', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 4 },
+        sensorFetchText: { color: '#fff', fontWeight: '500', fontSize: 13 },
         mapBtn: { backgroundColor: theme.card, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, borderWidth: 1.5, borderColor: '#4caf50' },
         mapBtnText: { fontSize: 14, fontWeight: '500', color: '#4caf50' },
         modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#1a5c35' },
