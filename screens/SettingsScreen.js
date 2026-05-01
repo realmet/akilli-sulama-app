@@ -186,37 +186,6 @@ export default function SettingsScreen() {
                 </Text>
             </TouchableOpacity>
 
-            {/* Hızlı Şehir Seçimi */}
-            <Text style={s.sectionLabel}>
-                {lang === 'tr' ? '📍 Hızlı Şehir Seçimi' : '📍 Quick City Select'}
-            </Text>
-            <View style={s.cityGrid}>
-                {[
-                    { name: 'Ankara', lat: 39.9167, lon: 32.8333 },
-                    { name: 'İstanbul', lat: 41.0082, lon: 28.9784 },
-                    { name: 'İzmir', lat: 38.4237, lon: 27.1428 },
-                    { name: 'Konya', lat: 37.8714, lon: 32.4846 },
-                    { name: 'Adana', lat: 37.0, lon: 35.3213 },
-                    { name: 'Bursa', lat: 40.1826, lon: 29.0665 },
-                    { name: 'Antalya', lat: 36.8969, lon: 30.7133 },
-                    { name: 'Samsun', lat: 41.2867, lon: 36.33 },
-                    { name: 'Gaziantep', lat: 37.0662, lon: 37.3833 },
-                    { name: 'Kayseri', lat: 38.7312, lon: 35.4787 },
-                ].map((city, i) => {
-                    const isSelected = parseFloat(lat) === city.lat && parseFloat(lon) === city.lon;
-                    return (
-                        <TouchableOpacity
-                            key={i}
-                            style={[s.cityChip, isSelected && { backgroundColor: theme.green, borderColor: theme.green }]}
-                            onPress={() => { setLat(String(city.lat)); setLon(String(city.lon)); }}
-                        >
-                            <Text style={[s.cityChipText, isSelected && { color: '#fff' }]}>
-                                {city.name}
-                            </Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
             {/* Haritadan Seç Butonu */}
             <TouchableOpacity style={s.mapBtn} onPress={() => { setTempCoords(null); setShowMap(true); }}>
                 <Text style={{ fontSize: 18 }}>🗺️</Text>
@@ -366,9 +335,6 @@ function makeStyles(theme) {
         locationLoading: { fontSize: 12, color: theme.greenText, fontStyle: 'italic' },
         gpsBtn: { backgroundColor: theme.card, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, borderWidth: 1.5, borderColor: '#2196F3' },
         gpsBtnText: { fontSize: 14, fontWeight: '500', color: '#2196F3' },
-        cityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-        cityChip: { backgroundColor: theme.card, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: theme.border },
-        cityChipText: { fontSize: 13, color: theme.text },
         modRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
         modBtn: { flex: 1, borderRadius: 10, borderWidth: 1, borderColor: theme.border, padding: 10, alignItems: 'center' },
         modBtnText: { fontSize: 13, color: theme.textSub, fontWeight: '500' },
