@@ -140,13 +140,25 @@ export default function HomeScreen() {
                 const sdRes = await fetch(`${API}/sensor-data/latest`);
                 if (sdRes.ok) {
                     const sdData = await sdRes.json();
-                    wrValue = sdData.wr;
-                    // Güncel değeri ayarlara da yaz
-                    const updated = { ...currentSettings, wr: wrValue };
-                    await AsyncStorage.setItem('tarla_settings', JSON.stringify(updated));
-                    setSettings(updated);
+                    if (sdData.connected) {
+                        wrValue = sdData.wr;
+                        const updated = { ...currentSettings, wr: wrValue };
+                        await AsyncStorage.setItem('tarla_settings', JSON.stringify(updated));
+                        setSettings(updated);
+                    } else {
+                        Alert.alert(
+                            '⚠️ ESP32 Bağlı Değil',
+                            'Son sensör verisi 1 saatten eski. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                            [{ text: 'Tamam' }]
+                        );
+                    }
+                } else {
+                    Alert.alert(
+                        '⚠️ ESP32 Bağlı Değil',
+                        'Sensörden veri alınamadı. Wr değerini manuel girin veya Sensörsüz moda geçin.',
+                        [{ text: 'Tamam' }]
+                    );
                 }
-            } catch (_) { /* sensör verisi yoksa manuel değeri kullan */ }
             } catch (_) { }
         }
 
