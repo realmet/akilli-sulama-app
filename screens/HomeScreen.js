@@ -98,6 +98,26 @@ export default function HomeScreen() {
     }
 
     async function toggleManualIrrigation(value) {
+        // Açmaya çalışıyorsa ESP32 bağlı mı kontrol et
+        if (value === true) {
+            try {
+                const sdRes = await fetch(`${API}/sensor-data/latest`);
+                if (sdRes.ok) {
+                    const sdData = await sdRes.json();
+                    if (!sdData.connected) {
+                        Alert.alert('⚠️ ESP32 Bağlı Değil', 'Manuel sulama açılamaz. ESP32 bağlantısı yok.');
+                        return;
+                    }
+                } else {
+                    Alert.alert('⚠️ ESP32 Bağlı Değil', 'Manuel sulama açılamaz. Sensörden veri alınamadı.');
+                    return;
+                }
+            } catch (_) {
+                Alert.alert('⚠️ ESP32 Bağlı Değil', 'Manuel sulama açılamaz. Sensöre ulaşılamıyor.');
+                return;
+            }
+        }
+
         setIrrigationLoading(true);
         try {
             const res = await fetch(`${API}/irrigation/control`, {
