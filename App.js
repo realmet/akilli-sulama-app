@@ -12,6 +12,16 @@ import AboutScreen from './screens/AboutScreen';
 
 const Tab = createBottomTabNavigator();
 
+function LogoTitle() {
+  const { isDark } = useTheme();
+  return (
+    <Image
+      source={require('./assets/logo_sulama-Photoroom.png')}
+      style={{ width: 130, height: 60, resizeMode: 'contain', tintColor: isDark ? '#ffffff' : undefined }}
+    />
+  );
+}
+
 function HeaderButtons() {
   const { isDark, toggleTheme } = useTheme();
   const { lang, toggleLang } = useLanguage();
@@ -20,19 +30,11 @@ function HeaderButtons() {
     <View style={{ flexDirection: 'row', gap: 8, marginRight: 12, alignItems: 'center', marginTop: -12 }}>
       <TouchableOpacity
         onPress={toggleLang}
-        style={{ flexDirection: 'row', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 }}
+        style={{ flexDirection: 'row', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}
       >
-        <Text style={{
-          color: lang === 'tr' ? '#ffffff' : 'rgba(255,255,255,0.45)',
-          fontSize: lang === 'tr' ? 14 : 11,
-          fontWeight: lang === 'tr' ? '700' : '400',
-        }}>TR</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>|</Text>
-        <Text style={{
-          color: lang === 'en' ? '#ffffff' : 'rgba(255,255,255,0.45)',
-          fontSize: lang === 'en' ? 14 : 11,
-          fontWeight: lang === 'en' ? '700' : '400',
-        }}>EN</Text>
+        <Text style={{ fontSize: 18, opacity: lang === 'tr' ? 1 : 0.4 }}>🇹🇷</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, alignSelf: 'center' }}>|</Text>
+        <Text style={{ fontSize: 18, opacity: lang === 'en' ? 1 : 0.4 }}>🇬🇧</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -51,7 +53,7 @@ function TabIcon({ name }) {
 }
 
 function AppNavigator() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { t } = useLanguage();
 
   return (

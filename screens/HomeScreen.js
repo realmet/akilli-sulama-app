@@ -23,6 +23,8 @@ export default function HomeScreen() {
     const [apiStatus, setApiStatus] = useState('checking');
     const [manualIrrigation, setManualIrrigation] = useState(false);
     const [irrigationLoading, setIrrigationLoading] = useState(false);
+    const [alan, setAlan] = useState(null);
+    const [gecmis, setGecmis] = useState([]);
 
     // Konum & mod state
     const [lat, setLat] = useState('39.9167');
@@ -49,6 +51,7 @@ export default function HomeScreen() {
 
     // --- İlk yükleme ---
     useEffect(() => { loadSettings(); }, []);
+
 
     // --- Konum adı (reverse geocode) ---
     useEffect(() => {
@@ -89,7 +92,12 @@ export default function HomeScreen() {
 
     // --- Ekrana odaklanınca API kontrol ---
     useFocusEffect(
-        useCallback(() => { checkApi(); }, [])
+        useCallback(() => {
+            checkApi();
+            AsyncStorage.getItem('analiz_gecmisi').then(g => {
+                setGecmis(g ? JSON.parse(g) : []);
+            });
+        }, [])
     );
 
     async function loadSettings() {
@@ -102,7 +110,12 @@ export default function HomeScreen() {
                 setMod(p.mod);
                 setWr(String(p.wr ?? '95.0'));
                 setRain(String(p.rain ?? '5.0'));
+                if (p.alan) setAlan(p.alan);
             }
+        } catch (_) {}
+        try {
+            const g = await AsyncStorage.getItem('analiz_gecmisi');
+            if (g) setGecmis(JSON.parse(g));
         } catch (_) {}
     }
 
@@ -269,7 +282,9 @@ export default function HomeScreen() {
             const netInfo = await NetInfo.fetch();
             if (netInfo.isConnected) {
                 const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-                setResult(await res.json());
+                const data = await res.json();
+                setResult(data);
+                await kaydetGecmis(data);
             } else {
                 uretOfflineKarar(url, body, wrNum);
             }
@@ -277,6 +292,25 @@ export default function HomeScreen() {
             uretOfflineKarar(url, body, wrNum);
         }
         setLoading(false);
+    }
+
+    async function kaydetGecmis(data) {
+        try {
+            const existing = await AsyncStorage.getItem('analiz_gecmisi');
+            const liste = existing ? JSON.parse(existing) : [];
+            const yeni = {
+                id: Date.now(),
+                tarih: new Date().toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                karar: data.decision,
+                wr: data.wr_current,
+                miktar: data.amount_mm,
+                stres: data.stress_level,
+                konum: locationName || `${lat}, ${lon}`,
+            };
+            const guncellendi = [yeni, ...liste].slice(0, 20);
+            await AsyncStorage.setItem('analiz_gecmisi', JSON.stringify(guncellendi));
+            setGecmis(guncellendi);
+        } catch (_) {}
     }
 
     function uretOfflineKarar(url, body, wrNum) {
@@ -296,6 +330,48 @@ export default function HomeScreen() {
             vpd: null,
             wr_forecast: null,
         });
+    }
+
+    function generateMessage(r) {
+        if (!r) return '';
+        const wr = r.wr_current ?? '-';
+        const psi = r.psi_leaf_est ?? '-';
+        const amount = r.amount_mm ?? 0;
+        const days = r.days_until_stress;
+        const rain = r.rain_next_3days ?? 0;
+        const en = lang === 'en';
+
+        if (r.message?.includes('ÇEVRİMDIŞI') || r.message?.includes('OFFLINE')) {
+            return en
+                ? '⚠️ OFFLINE MODE: AI unreachable. Local emergency rules applied.'
+                : '⚠️ ÇEVRİMDIŞI MOD: Yapay zekaya ulaşılamıyor. Yerel acil durum kuralları işletildi.';
+        }
+
+        const dec = r.decision;
+        if (dec === 'KRİTİK_UYARI') {
+            return en
+                ? `⚠️ CRITICAL: Soil moisture ${wr} mm — below critical threshold! Ψleaf=${psi} MPa. Irrigate ${amount} mm immediately.`
+                : `⚠️ KRİTİK: Toprak nemi ${wr} mm — kritik eşik altında! Ψleaf=${psi} MPa. Hemen ${amount} mm sulama yapın.`;
+        }
+        if (dec === 'YAĞMUR_BEKLENIYOR') {
+            return en
+                ? `🌧️ ${rain} mm rain expected in next 3 days. Irrigation delayed. Current Wr=${wr} mm is sufficient.`
+                : `🌧️ Önümüzdeki 3 günde ${rain} mm yağış bekleniyor. Sulama geciktiriliyor. Mevcut Wr=${wr} mm yeterli.`;
+        }
+        if (dec === 'SULA') {
+            if (days != null && days <= 3) {
+                return en
+                    ? `📊 Proactive irrigation: stress expected in ${days} day(s). Apply ${amount} mm preventively.`
+                    : `📊 Proaktif sulama: ${days} gün sonra stres bekleniyor. Önleyici ${amount} mm sulama önerisi.`;
+            }
+            return en
+                ? `💧 Irrigation recommended: Wr=${wr} mm. Ψleaf=${psi} MPa. Apply ${amount} mm.`
+                : `💧 Sulama önerisi: Wr=${wr} mm. Ψleaf=${psi} MPa. ${amount} mm sulama yapın.`;
+        }
+        // GEREK_YOK
+        return en
+            ? `✅ No irrigation needed. Wr=${wr} mm is sufficient. Ψleaf=${psi} MPa. ${days ? `Check again in ${days} day(s).` : 'No stress risk within 7 days.'}`
+            : `✅ Sulama gerek yok. Wr=${wr} mm yeterli. Ψleaf=${psi} MPa. ${days ? `${days} gün sonra kontrol edin.` : '7 gün içinde stres riski yok.'}`;
     }
 
     function getBanner() {
@@ -582,9 +658,19 @@ export default function HomeScreen() {
                         </>
                     )}
 
+                    {alan && result.amount_mm > 0 && (
+                        <View style={[s.messageCard, { borderLeftColor: '#2196F3', marginBottom: 12 }]}>
+                            <Text style={[s.messageTitle, { color: '#2196F3' }]}>💧 {lang === 'tr' ? 'Tarla için Sulama Miktarı' : 'Irrigation for Field'}</Text>
+                            <Text style={s.messageText}>
+                                {`${(result.amount_mm * alan * 1000).toLocaleString()} L  ≈  ${(result.amount_mm * alan).toFixed(1)} m³`}
+                                {`\n(${alan} ${lang === 'tr' ? 'dekar' : 'decare'} × ${result.amount_mm} mm)`}
+                            </Text>
+                        </View>
+                    )}
+
                     <View style={s.messageCard}>
                         <Text style={s.messageTitle}>🤖 {t.aiSuggestion || 'Sistem Tavsiyesi'}</Text>
-                        <Text style={s.messageText}>{result.message}</Text>
+                        <Text style={s.messageText}>{generateMessage(result)}</Text>
                     </View>
                 </>
             )}
@@ -595,6 +681,27 @@ export default function HomeScreen() {
                     <Text style={s.emptyTitle}>{t.waitingAnalysis || 'Analiz Bekleniyor'}</Text>
                     <Text style={s.emptyText}>{lang === 'tr' ? 'Konumu ve modu ayarlayıp Analiz Et butonuna bas.' : 'Set your location and mode, then press Analyze.'}</Text>
                 </View>
+            )}
+
+            {gecmis.length > 0 && (
+                <>
+                    <Text style={[s.sectionLabel, { marginTop: 16 }]}>
+                        📋 {lang === 'tr' ? 'Analiz Geçmişi' : 'Analysis History'}
+                    </Text>
+                    {gecmis.map(item => {
+                        const icon = item.karar === 'KRİTİK_UYARI' ? '🔴' : item.karar === 'SULA' ? '💧' : item.karar === 'YAĞMUR_BEKLENIYOR' ? '🌧️' : '✅';
+                        return (
+                            <View key={item.id} style={s.gecmisCard}>
+                                <Text style={s.gecmisIcon}>{icon}</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={s.gecmisKonum} numberOfLines={1}>{item.konum}</Text>
+                                    <Text style={s.gecmisBilgi}>Wr: {item.wr?.toFixed?.(1) ?? item.wr} mm  •  {item.miktar} mm  •  {item.stres}</Text>
+                                </View>
+                                <Text style={s.gecmisTarih}>{item.tarih}</Text>
+                            </View>
+                        );
+                    })}
+                </>
             )}
 
         </ScrollView>
@@ -668,5 +775,10 @@ function makeStyles(theme) {
         modalCancelText: { fontSize: 14, color: '#666' },
         modalConfirmBtn: { flex: 1, borderRadius: 12, padding: 14, alignItems: 'center', backgroundColor: '#1a5c35' },
         modalConfirmText: { fontSize: 14, color: '#fff', fontWeight: '500' },
+        gecmisCard: { backgroundColor: theme.card, borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, borderWidth: 0.5, borderColor: theme.border },
+        gecmisIcon: { fontSize: 20 },
+        gecmisKonum: { fontSize: 13, fontWeight: '500', color: theme.text, marginBottom: 2 },
+        gecmisBilgi: { fontSize: 11, color: theme.textSub },
+        gecmisTarih: { fontSize: 10, color: theme.textLight, textAlign: 'right' },
     });
 }
