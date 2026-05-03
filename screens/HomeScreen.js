@@ -145,14 +145,15 @@ export default function HomeScreen() {
             if (!res.ok) throw new Error();
             const data = await res.json();
             if (!data.connected) {
-                Alert.alert('⚠️ ESP32 Bağlı Değil', `Son okuma 1 saatten eski (${new Date(data.timestamp).toLocaleTimeString('tr-TR')}). Wr değerini manuel girin.`);
+                const ts = new Date(data.timestamp).toLocaleTimeString(lang === 'tr' ? 'tr-TR' : 'en-US');
+                Alert.alert(`⚠️ ${t.esp32Title}`, `${t.sensorOldWarning} (${ts}). ${t.sensorManualInput}`);
             } else {
                 setWr(String(data.wr.toFixed(1)));
-                const ts = new Date(data.timestamp).toLocaleTimeString('tr-TR');
-                Alert.alert('✅ Sensör Verisi Alındı', `Wr: ${data.wr.toFixed(1)} mm\nSıcaklık: ${data.temperature ?? '-'}°C\nNem: ${data.humidity ?? '-'}%\nSon okuma: ${ts}`);
+                const ts = new Date(data.timestamp).toLocaleTimeString(lang === 'tr' ? 'tr-TR' : 'en-US');
+                Alert.alert(`✅ ${t.sensorFetched}`, `Wr: ${data.wr.toFixed(1)} mm\n${lang === 'tr' ? 'Sıcaklık' : 'Temp'}: ${data.temperature ?? '-'}°C\n${lang === 'tr' ? 'Nem' : 'Humidity'}: ${data.humidity ?? '-'}%\n${lang === 'tr' ? 'Son okuma' : 'Last reading'}: ${ts}`);
             }
         } catch (_) {
-            Alert.alert('⚠️ ESP32 Bağlı Değil', 'Sensörden veri alınamadı. ESP32 çalışıyor mu?');
+            Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32NoData);
         }
         setSensorFetching(false);
     }
@@ -197,15 +198,15 @@ export default function HomeScreen() {
                 if (sdRes.ok) {
                     const sdData = await sdRes.json();
                     if (!sdData.connected) {
-                        Alert.alert('⚠️ ESP32 Bağlı Değil', 'Manuel sulama açılamaz. ESP32 bağlantısı yok.');
+                        Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32ManualNo);
                         return;
                     }
                 } else {
-                    Alert.alert('⚠️ ESP32 Bağlı Değil', 'Manuel sulama açılamaz. Sensörden veri alınamadı.');
+                    Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32ManualNoData);
                     return;
                 }
             } catch (_) {
-                Alert.alert('⚠️ ESP32 Bağlı Değil', 'Manuel sulama açılamaz. Sensöre ulaşılamıyor.');
+                Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32ManualUnreachable);
                 return;
             }
         }
@@ -217,9 +218,9 @@ export default function HomeScreen() {
                 body: JSON.stringify({ manual_on: value }),
             });
             if (res.ok) setManualIrrigation(value);
-            else Alert.alert('Hata', 'Sulama komutu gönderilemedi.');
+            else Alert.alert(t.errorTitle, t.irrigationCmdFail);
         } catch (_) {
-            Alert.alert('Hata', "API'ye bağlanılamıyor.");
+            Alert.alert(t.errorTitle, t.apiConnectFail);
         }
         setIrrigationLoading(false);
     }
@@ -244,25 +245,25 @@ export default function HomeScreen() {
                         wrValue = sdData.wr;
                     } else {
                         setLoading(false);
-                        Alert.alert('⚠️ ESP32 Bağlı Değil', 'Son sensör verisi 1 saatten eski. Wr değerini manuel girin veya Sensörsüz moda geçin.', [{ text: 'Tamam' }]);
+                        Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32OldData, [{ text: 'OK' }]);
                         return;
                     }
                 } else {
                     setLoading(false);
-                    Alert.alert('⚠️ ESP32 Bağlı Değil', 'Sensörden veri alınamadı.', [{ text: 'Tamam' }]);
+                    Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32NoData, [{ text: 'OK' }]);
                     return;
                 }
             } catch (_) {
                 setLoading(false);
-                Alert.alert('⚠️ ESP32 Bağlı Değil', 'Sensöre ulaşılamadı.', [{ text: 'Tamam' }]);
+                Alert.alert(`⚠️ ${t.esp32Title}`, t.esp32Unreachable, [{ text: 'OK' }]);
                 return;
             }
         }
 
         const url = mod === 'sensorsuz' ? `${API}/predict/no-sensor` : `${API}/predict/sensor`;
         const body = mod === 'sensorsuz'
-            ? { location: { lat: latNum, lon: lonNum } }
-            : { wr_current: wrValue, location: { lat: latNum, lon: lonNum }, rain_next_3days: rainNum };
+            ? { location: { lat: latNum, lon: lonNum }, lang }
+            : { wr_current: wrValue, location: { lat: latNum, lon: lonNum }, rain_next_3days: rainNum, lang };
 
         try {
             const netInfo = await NetInfo.fetch();
@@ -285,7 +286,9 @@ export default function HomeScreen() {
             irrigate_now: isSoilDry,
             amount_mm: isSoilDry ? 15 : 0,
             stress_detected: isSoilDry,
-            message: '⚠️ ÇEVRİMDIŞI MOD: Yapay zekaya ulaşılamıyor. Yerel acil durum kuralları işletildi.',
+            message: lang === 'en'
+                ? '⚠️ OFFLINE MODE: AI unreachable. Local emergency rules applied.'
+                : '⚠️ ÇEVRİMDIŞI MOD: Yapay zekaya ulaşılamıyor. Yerel acil durum kuralları işletildi.',
             wr_current: wrNum,
             temp_max: null,
             rain_next_3days: parseFloat(rain) || 0,

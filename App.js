@@ -17,7 +17,7 @@ function HeaderButtons() {
   const { lang, toggleLang } = useLanguage();
 
   return (
-    <View style={{ flexDirection: 'row', gap: 8, marginRight: 12, alignItems: 'center' }}>
+    <View style={{ flexDirection: 'row', gap: 8, marginRight: 12, alignItems: 'center', marginTop: -12 }}>
       <TouchableOpacity
         onPress={toggleLang}
         style={{ flexDirection: 'row', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 }}
@@ -72,19 +72,20 @@ function AppNavigator() {
           headerStyle: { backgroundColor: theme.header, height: 90 },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: '500' },
+          headerTitleContainerStyle: { marginTop: -12 },
           headerTitle: () => (
             <Image
               source={require('./assets/logo_sulama-Photoroom.png')}
-              style={{ width: 150, height: 130, resizeMode: 'contain' }}
+              style={{ width: 130, height: 60, resizeMode: 'contain' }}
             />
           ),
           headerRight: () => <HeaderButtons />,
         })}
       >
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Forecast" component={ForecastScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
-        <Tab.Screen name="About" component={AboutScreen} />
+        <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t.homeTab }} />
+        <Tab.Screen name="Forecast" component={ForecastScreen} options={{ tabBarLabel: t.forecastTab }} />
+        <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: t.settingsTab }} />
+        <Tab.Screen name="About" component={AboutScreen} options={{ tabBarLabel: t.aboutTab }} />
       </Tab.Navigator>
     </NavigationContainer>
   );
