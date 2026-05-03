@@ -75,12 +75,7 @@ function AppNavigator() {
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: '500' },
           headerTitleContainerStyle: { marginTop: -12 },
-          headerTitle: () => (
-            <Image
-              source={require('./assets/logo_sulama-Photoroom.png')}
-              style={{ width: 130, height: 60, resizeMode: 'contain' }}
-            />
-          ),
+          headerTitle: () => <LogoTitle />,
           headerRight: () => <HeaderButtons />,
         })}
       >
