@@ -38,6 +38,21 @@ export default function HomeScreen() {
     const [showMap, setShowMap] = useState(false);
     const [tempCoords, setTempCoords] = useState(null);
 
+    // --- Manuel toggle kapandığında otomatik güncelle ---
+    useEffect(() => {
+        if (!manualIrrigation) return;
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`${API}/irrigation/control`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!data.manual_on) setManualIrrigation(false);
+                }
+            } catch (_) {}
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [manualIrrigation]);
+
     // --- Ağ dinleyici ---
     useEffect(() => {
         const unsubscribe = NetInfo.addEventListener(state => {
